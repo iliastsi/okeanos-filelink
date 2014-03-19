@@ -19,10 +19,8 @@ var gPithosUrl = "";
 var gAstakosUrl = "";
 
 const kContainer = "ThunderBird FileLink/";
-const kPithosUrl = "https://pithos";
 const kPithosApi = "/object-store/v1/";
-const kAstakosUrl = "https://accounts";
-const kAstakosApi = "/account/v1.0/authenticate";
+const kAstakosApi = "/identity/v2.0/tokens";
 const kUpdate = "?update&format=json"
 
 
@@ -86,11 +84,11 @@ nsOkeanos.prototype = {
             "mail.cloud_files.accounts." +  aAccountKey + ".");
     this._accountType = this._prefBranch.getCharPref("accountType");
     if (this._accountType == "official") {
-      gPithosUrl  = kPithosUrl  + ".okeanos.grnet.gr";
-      gAstakosUrl = kAstakosUrl + ".okeanos.grnet.gr";
+      gPithosUrl  = "https://pithos.okeanos.grnet.gr";
+      gAstakosUrl = "https://accounts.okeanos.grnet.gr";
     } else {
-      gPithosUrl  = kPithosUrl  + ".okeanos.io";
-      gAstakosUrl = kAstakosUrl + ".okeanos.io";
+      gPithosUrl  = "https://storage.demo.synnefo.org";
+      gAstakosUrl = "https://accounts.demo.synnefo.org";
     }
     this._loggedIn = this._userName != "" && this._cachedAuthToken != "";
   },
@@ -525,7 +523,7 @@ nsOkeanos.prototype = {
 
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
-    req.open("GET", gAstakosUrl + kAstakosApi, true);
+    req.open("POST", gAstakosUrl + kAstakosApi, true);
     req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
 
     req.onerror = function() {
@@ -540,7 +538,7 @@ nsOkeanos.prototype = {
                       " response = " + req.responseText);
         let docResponse = JSON.parse(req.responseText);
         this.log.info("login response parsed = " + docResponse);
-        this._userName = docResponse.uuid;
+        this._userName = docResponse.access.token.tenant.id;
         this.log.info("uniq username = " + this._userName);
         if (this._userName) {
           this._loggedIn = true;
@@ -561,9 +559,16 @@ nsOkeanos.prototype = {
       }
     }.bind(this);
 
+    var body = {
+        "auth": {
+            "token": {
+                "id": this._cachedAuthToken
+            }
+        }
+    }
     req.setRequestHeader("Content-type", "application/json");
-    req.setRequestHeader("X-Auth-Token", this._cachedAuthToken);
-    req.send();
+    req.setRequestHeader("Accept", "application/json");
+    req.send(JSON.stringify(body));
     this.log.info("Login information sent!");
   },
 

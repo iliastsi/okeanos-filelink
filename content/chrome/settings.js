@@ -17,7 +17,7 @@ function toggleDashboard() {
     dashboard.setAttribute("href", "https://accounts.okeanos.grnet.gr/ui/api_access");
     newaccount.setAttribute("href", "https://accounts.okeanos.grnet.gr/ui/signup");
   } else {
-    dashboard.setAttribute("href", "https://accounts.okeanos.io/ui/api_access");
-    newaccount.setAttribute("href", "https://accounts.okeanos.io/ui/signup");
+    dashboard.setAttribute("href", "https://accounts.demo.synnefo.org/ui/api_access");
+    newaccount.setAttribute("href", "https://accounts.demo.synnefo.org/ui/signup");
   }
 }
