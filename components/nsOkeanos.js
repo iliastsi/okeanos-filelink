@@ -11,9 +11,9 @@
 const {classes: Cc, interfaces: Ci, utils: Cu, results: Cr} = Components;
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
-Cu.import("resource://gre/modules/Services.jsm");
-Cu.import("resource:///modules/gloda/log4moz.js");
-Cu.import("resource:///modules/cloudFileAccounts.js");
+Cu.import("resource://app/modules/Services.jsm");
+Cu.import("resource://app/modules/gloda/log4moz.js");
+Cu.import("resource://app/modules/cloudFileAccounts.js");
 
 var gPithosUrl = "";
 var gAstakosUrl = "";
