@@ -14,7 +14,7 @@ Cu.import("resource:///modules/gloda/log4moz.js");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
 const wpl = Ci.nsIWebProgressListener;
-const log = Log4Moz.getConfiguredLogger("OkeanosAuth");
+const log = Log4Moz.getConfiguredLogger("SynnefoAuth");
 const kCookieName = "_pithos2_a";
 
 

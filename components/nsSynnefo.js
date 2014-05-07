@@ -4,7 +4,7 @@
 
 /* This file implements the nsIMsgCloudFileProvider interface.
  *
- * This component handles the ~okeanos implementation of the
+ * This component handles the Synnefo implementation of the
  * nsIMsgCloudFileProvider interface.
  */
 
@@ -45,24 +45,24 @@ String.prototype.trim = function(charlist) {
 /**
  * Logger
  */
-function nsOkeanos() {
-  this.log = Log4Moz.getConfiguredLogger("Okeanos");
+function nsSynnefo() {
+  this.log = Log4Moz.getConfiguredLogger("Synnefo");
 }
 
-nsOkeanos.prototype = {
+nsSynnefo.prototype = {
   /* nsISupports */
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIMsgCloudFileProvider]),
 
-  classID: Components.ID("{a73587f2-74f0-11e2-923f-d1186188709b}"),
+  classID: Components.ID("{62cf0994-d5e3-11e3-85dc-091c1d5d46b0}"),
 
-  get type() "Okeanos",
-  get displayName() "~okeanos",
+  get type() "Synnefo",
+  get displayName() "Synnefo",
   get serviceURL() this._endpointURLs['astakos_weblogin'],
-  get iconClass() "chrome://okeanos/content/okeanos.png",
+  get iconClass() "chrome://synnefo/content/synnefo.png",
   get accountKey() this._accountKey,
   get lastError() this._lastErrorText,
-  get settingsURL() "chrome://okeanos/content/settings.xhtml",
-  get managementURL() "chrome://okeanos/content/management.xhtml",
+  get settingsURL() "chrome://synnefo/content/settings.xhtml",
+  get managementURL() "chrome://synnefo/content/management.xhtml",
 
   _accountKey: false,
   _prefBranch: null,
@@ -86,7 +86,7 @@ nsOkeanos.prototype = {
    *
    * @param aAccountKey the account key to initialize with.
    */
-  init: function nsOkeanos_init(aAccountKey) {
+  init: function nsSynnefo_init(aAccountKey) {
     this.log.info("in init");
     this._accountKey = aAccountKey;
     this._prefBranch = Services.prefs.getBranch(
@@ -97,13 +97,13 @@ nsOkeanos.prototype = {
 
   /**
    * Private callback function passed to, and called from
-   * nsOkeanosFileUploader.
+   * nsSynnefoFileUploader.
    *
    * @param aRequestObserver a request observer for monitoring the start and
    *                         stop states of a request.
    * @param aStatus the status of the request.
    */
-  _uploaderCallback: function nsOkeanos__uploaderCallback(
+  _uploaderCallback: function nsSynnefo__uploaderCallback(
                          aRequestObserver, aStatus) {
     aRequestObserver.onStopRequest(null, null, aStatus);
 
@@ -128,13 +128,13 @@ nsOkeanos.prototype = {
 
 
   /**
-   * Attempts to upload a file to ~okeanos servers.
+   * Attempts to upload a file to Synnefo servers.
    *
    * @param aFile the nsIFile to be uploaded
    * @param aCallback an nsIRequestObserver for monitoring the start and
    *                  stop states of the upload procedure.
    */
-  uploadFile: function nsOkeanos_uploadFile(aFile, aCallback) {
+  uploadFile: function nsSynnefo_uploadFile(aFile, aCallback) {
     this.log.info("in upload file");
     if (Services.io.offline)
       throw Ci.nsIMsgCloudFileProvider.offlineErr;
@@ -144,7 +144,7 @@ nsOkeanos.prototype = {
     // if we're uploading a file, queue this request.
     if (this._uploadingFile && this._uploadingFile != aFile) {
       this.log.info("Adding file to queue");
-      let uploader = new nsOkeanosFileUploader(
+      let uploader = new nsSynnefoFileUploader(
           this, aFile, this._uploaderCallback.bind(this), aCallback);
       this._uploads.push(uploader);
       return;
@@ -195,7 +195,7 @@ nsOkeanos.prototype = {
       return aCallback.onStopRequest(null, null, exceedsQuota);
 
     if (!this._uploader) {
-      this._uploader = new nsOkeanosFileUploader(
+      this._uploader = new nsSynnefoFileUploader(
           this, aFile, this._uploaderCallback.bind(this), aCallback);
       this._uploads.unshift(this._uploader);
     }
@@ -209,7 +209,7 @@ nsOkeanos.prototype = {
    *
    * @param aFile the nsIFile to cancel the upload for.
    */
-  cancelFileUpload: function nsOkeanos_cancelFileUpload(aFile) {
+  cancelFileUpload: function nsSynnefo_cancelFileUpload(aFile) {
     this.log.info("in cancel upload");
     if (this._uploadingFile != null && this._uploader != null &&
         this._uploadingFile.equals(aFile)) {
@@ -232,7 +232,7 @@ nsOkeanos.prototype = {
    *
    * @param aFile the nsIFile to get the URL for.
    */
-  urlForFile: function nsOkeanos_urlForFile(aFile) {
+  urlForFile: function nsSynnefo_urlForFile(aFile) {
     return this._urlsForFiles[aFile.path];
   },
 
@@ -245,7 +245,7 @@ nsOkeanos.prototype = {
    * @param failureCallback a callback fired if retrieving profile information
    *                        fails.
    */
-  _getUserInfo: function nsOkeanos_userInfo(successCallback, failureCallback) {
+  _getUserInfo: function nsSynnefo_userInfo(successCallback, failureCallback) {
     // First retrieve UUID then Quotas
     let retry = function() {
       this._getUserInfo(successCallback, failureCallback);
@@ -274,7 +274,7 @@ nsOkeanos.prototype = {
   /**
    * A private function for retrieving the end points.
    */
-  _getEndpoints: function nsOkeanos_endpoints(successCallback, failureCallback) {
+  _getEndpoints: function nsSynnefo_endpoints(successCallback, failureCallback) {
     this.log.info("Retrieving service endpoints")
 
     if (this._endpointURLs != null) {
@@ -348,7 +348,7 @@ nsOkeanos.prototype = {
    * @param failureCallback a callback fired if retrieving profile information
    *                        fails.
    */
-  _getUserQuotas: function nsOkeanos_userQuotas(successCallback, failureCallback) {
+  _getUserQuotas: function nsSynnefo_userQuotas(successCallback, failureCallback) {
     this.log.info("getting user quotas");
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
@@ -390,7 +390,7 @@ nsOkeanos.prototype = {
    * @param failureCallback a callback fired if retrieving profile information
    *                        fails.
    */
-  _getUserUUID: function nsOkeanos_userUUID(successCallback, failureCallback) {
+  _getUserUUID: function nsSynnefo_userUUID(successCallback, failureCallback) {
     this.log.info("getting user UUID");
 
     if (this._userInfo) {
@@ -455,7 +455,7 @@ nsOkeanos.prototype = {
    * @param aListener an nsIRequestObserver for monitoring the start and stop
    *                  states of fetching profile information.
    */
-  refreshUserInfo: function nsOkeanos_refreshUserInfo(aWithUI, aListener) {
+  refreshUserInfo: function nsSynnefo_refreshUserInfo(aWithUI, aListener) {
     if (Services.io.offline)
       throw Ci.nsIMsgCloudFileProvider.offlineErr;
 
@@ -486,12 +486,12 @@ nsOkeanos.prototype = {
 
 
   /**
-   * For a particular error, return a URL if ~okeanos has a page for handling
+   * For a particular error, return a URL if Synnefo has a page for handling
    * that particular error.
    *
    * @param aError an error to get the URL for.
    */
-  providerUrlForError: function nsOkeanos_providerUrlForError(aError) {
+  providerUrlForError: function nsSynnefo_providerUrlForError(aError) {
     return "";
   },
 
@@ -501,7 +501,7 @@ nsOkeanos.prototype = {
    * there's a url we can load in a content tab that will allow the user
    * to create an account.
    */
-  get createNewAccountUrl() "https://accounts.okeanos.grnet.gr/ui/signup",
+  get createNewAccountUrl() "https://accounts.demo.synnefo.org/ui/login",
 
   get fileUploadSizeLimit() this._maxFileSize,
   get remainingFileSpace() this._availableStorage,
@@ -509,10 +509,10 @@ nsOkeanos.prototype = {
 
 
   /**
-   * Our ~okeanos implementation does not implement the
+   * Our Synnefo implementation does not implement the
    * createNewAccount function defined in nsIMsgCloudFileProvider.idl.
    */
-  createNewAccount: function nsOkeanos_createNewAccount(
+  createNewAccount: function nsSynnefo_createNewAccount(
           aEmailAddress, aPassword, aFirstName, aLastName) {
     return Cr.NS_ERROR_NOT_IMPLEMENTED;
   },
@@ -525,7 +525,7 @@ nsOkeanos.prototype = {
    * @param aRequestObserver an nsIRequestObserver for monitoring the start and
    *                         stop states of the login procedure.
    */
-  createExistingAccount: function nsOkeanos_createExistingAccount(
+  createExistingAccount: function nsSynnefo_createExistingAccount(
                              aRequestObserver) {
      // TODO: replace this with a better function
     let successCb = function(aResponseText, aRequest) {
@@ -548,7 +548,7 @@ nsOkeanos.prototype = {
    * @param aCallback an nsIRequestObserver for monitoring the starting and
    *                  ending states of the deletion request.
    */
-  deleteFile: function nsOkeanos_deleteFile(aFile, aCallback) {
+  deleteFile: function nsSynnefo_deleteFile(aFile, aCallback) {
     this.log.info("Deleting a file");
 
     if (Services.io.offline) {
@@ -610,23 +610,23 @@ nsOkeanos.prototype = {
 
   /**
    * This function is used by our testing framework to override the default
-   * URL's that nsOkeanos connects to.
+   * URL's that nsSynnefo connects to.
    */
-  overrideUrls : function nsOkeanos_overrideUrls(aNumUrls, aUrls) {
+  overrideUrls : function nsSynnefo_overrideUrls(aNumUrls, aUrls) {
     this._authURL = aUrls[0].trimRight("/");
   },
 
 
   /**
-   * Clears any saved ~okeanos passwords for this instance's account.
+   * Clears any saved Synnefo passwords for this instance's account.
    */
-  clearPassword: function nsOkeanos_clearPassword() {
+  clearPassword: function nsSynnefo_clearPassword() {
     this._cachedAuthToken = "";
   },
 
 
   /**
-   * logon to the ~okeanos account.
+   * logon to the Synnefo account.
    *
    * @param successCallback - called if logon is successful
    * @param failureCallback - called back on error.
@@ -634,7 +634,7 @@ nsOkeanos.prototype = {
    *                This is used for things like displaying account settings,
    *                where we don't want to pop up the oauth ui.
    */
-  logon: function nsOkeanos_login(successCallback, failureCallback, aWithUI) {
+  logon: function nsSynnefo_login(successCallback, failureCallback, aWithUI) {
     if (this._loggedIn) {
       // We are already logged in
       successCallback();
@@ -651,7 +651,7 @@ nsOkeanos.prototype = {
     // Open UI and let user authenticate
     let getToken = function() {
       this._browserRequest = {
-        promptText : "Okeanos",
+        promptText : "Synnefo",
         account: this,
         _active: true,
         iconURI : this.iconClass,
@@ -677,7 +677,7 @@ nsOkeanos.prototype = {
       };
       this.wrappedJSObject = this._browserRequest;
       Services.ww.openWindow(
-          null, "chrome://okeanos/content/auth.xul",
+          null, "chrome://synnefo/content/auth.xul",
           null, "chrome,centerscreen,width=1100px,height=1000px", this);
     }.bind(this);
 
@@ -724,24 +724,24 @@ nsOkeanos.prototype = {
   /**
    * Clear user info
    */
-  _clearUserInfo : function nsOkeanos_clearUserInfo() {
+  _clearUserInfo : function nsSynnefo_clearUserInfo() {
     this._userName = "";
   },
 
 };
 
 
-function nsOkeanosFileUploader(aOkeanos, aFile, aCallback, aRequestObserver) {
-  this.okeanos = aOkeanos;
-  this.log = this.okeanos.log;
-  this.log.info("new nsOkeanosFileUploader file = " + aFile.leafName);
+function nsSynnefoFileUploader(aSynnefo, aFile, aCallback, aRequestObserver) {
+  this.synnefo = aSynnefo;
+  this.log = this.synnefo.log;
+  this.log.info("new nsSynnefoFileUploader file = " + aFile.leafName);
   this.file = aFile;
   this.callback = aCallback;
   this.requestObserver = aRequestObserver;
 }
 
-nsOkeanosFileUploader.prototype = {
-  okeanos : null,
+nsSynnefoFileUploader.prototype = {
+  synnefo : null,
   file : null,
   callback : null,
   _request : null,
@@ -774,8 +774,8 @@ nsOkeanosFileUploader.prototype = {
   _prepareToSend: function nsPFU__prepareToSend(successCallback,
                                                 failureCallback) {
     // First create the container
-    let container = this.okeanos._endpointURLs['pithos_object-store'].trimRight("/") +
-      "/" + this.okeanos._userName + "/" + kContainer + "/";
+    let container = this.synnefo._endpointURLs['pithos_object-store'].trimRight("/") +
+      "/" + this.synnefo._userName + "/" + kContainer + "/";
     let dateStr = this._formatDate();
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
@@ -788,13 +788,13 @@ nsOkeanosFileUploader.prototype = {
           ? this.file.leafName
           : encodeURIComponent(this.file.leafName);
         this._urlFile = container + dateStr + "/" + fileName;
-        this.okeanos._uploadInfo[this.file.path] = this._urlFile;
+        this.synnefo._uploadInfo[this.file.path] = this._urlFile;
         successCallback();
       } else {
         this.log.error("Preparing to send failed!");
         this.log.error("Response was: " + req.responseText);
-        this.okeanos._lastErrorText = req.responseText;
-        this.okeanos._lastErrorStatus = req.status;
+        this.synnefo._lastErrorText = req.responseText;
+        this.synnefo._lastErrorStatus = req.status;
         failureCallback();
       }
     }.bind(this);
@@ -803,7 +803,7 @@ nsOkeanosFileUploader.prototype = {
         failureCallback();
     }.bind(this);
 
-    req.setRequestHeader("X-Auth-Token", this.okeanos._cachedAuthToken);
+    req.setRequestHeader("X-Auth-Token", this.synnefo._cachedAuthToken);
     req.setRequestHeader("Content-Type", "application/json");
     req.send();
   },
@@ -835,7 +835,7 @@ nsOkeanosFileUploader.prototype = {
 
   /**
    * Once we've got the URL to upload the file to, this function actually
-   * does the upload of the file to ~okeanos.
+   * does the upload of the file to Synnefo.
    */
   _uploadFile: function nsPFU__uploadFile() {
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
@@ -869,7 +869,7 @@ nsOkeanosFileUploader.prototype = {
     catch (ex) {
         contentType = "application/octet-stream";
     }
-    req.setRequestHeader("X-Auth-Token", this.okeanos._cachedAuthToken);
+    req.setRequestHeader("X-Auth-Token", this.synnefo._cachedAuthToken);
     req.setRequestHeader("Content-type", contentType);
     try {
       this._fstream = Cc["@mozilla.org/network/file-input-stream;1"]
@@ -933,7 +933,7 @@ nsOkeanosFileUploader.prototype = {
       failed();
     }.bind(this);
 
-    req.setRequestHeader("X-Auth-Token", this.okeanos._cachedAuthToken);
+    req.setRequestHeader("X-Auth-Token", this.synnefo._cachedAuthToken);
     req.setRequestHeader("X-Object-Public", "True");
     req.setRequestHeader("Content-type", "application/json");
     req.send();
@@ -961,7 +961,7 @@ nsOkeanosFileUploader.prototype = {
 
     req.onload = function() {
       if (req.status >= 200 && req.status < 400) {
-        this.okeanos._urlsForFiles[this.file.path] =
+        this.synnefo._urlsForFiles[this.file.path] =
           req.getResponseHeader("x-object-public");
         succeed();
       } else {
@@ -969,7 +969,7 @@ nsOkeanosFileUploader.prototype = {
       }
     }.bind(this);
 
-    req.setRequestHeader("X-Auth-Token", this.okeanos._cachedAuthToken);
+    req.setRequestHeader("X-Auth-Token", this.synnefo._cachedAuthToken);
     req.setRequestHeader("Content-type", "application/json");
     req.send();
   },
@@ -977,7 +977,7 @@ nsOkeanosFileUploader.prototype = {
 
   /**
    * Cleans up any temporary files that this
-   * nsOkeanosFileUploader may have created.
+   * nsSynnefoFileUploader may have created.
    */
   cleanupTempFile: function nsPFU_cleanupTempFile() {
     if (this._bufStream)
@@ -987,4 +987,4 @@ nsOkeanosFileUploader.prototype = {
   },
 };
 
-const NSGetFactory = XPCOMUtils.generateNSGetFactory([nsOkeanos]);
+const NSGetFactory = XPCOMUtils.generateNSGetFactory([nsSynnefo]);

@@ -5,29 +5,29 @@
 
 <!DOCTYPE html [
   <!ENTITY % htmlDTD PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "DTD/xhtml1-strict.dtd"> %htmlDTD;
-  <!ENTITY % ppDTD SYSTEM "chrome://okeanos/locale/settings.dtd"> %ppDTD;
+  <!ENTITY % ppDTD SYSTEM "chrome://synnefo/locale/settings.dtd"> %ppDTD;
 ]>
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <script type="application/javascript"
-            src="chrome://okeanos/content/settings.js"/>
+            src="chrome://synnefo/content/settings.js"/>
     <link rel="stylesheet"
           type="text/css"
           href="chrome://messenger/skin/cloudfile/addAccountDialog.css" />
   </head>
   <body id="provider-settings">
     <form id="provider-form" onsubmit="return false;">
-      <label for="authURL">&OkeanosSettings.authURL;</label>
+      <label for="authURL">&SynnefoSettings.authURL;</label>
       <input id="authURL" type="text"
              value="https://accounts.okeanos.grnet.gr/identity/v2.0"/>
       <div id="learn-more" class="float-right">
         <a href="https://synnefo.org">
-          &OkeanosSettings.learnMore;
+          &SynnefoSettings.learnMore;
         </a>
       </div>
       <div>
         <a id="newaccount" href="https://accounts.demo.synnefo.org/ui/signup#">
-          &OkeanosSettings.needAnAccount;
+          &SynnefoSettings.needAnAccount;
         </a>
       </div>
     </form>

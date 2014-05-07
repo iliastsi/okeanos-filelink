@@ -1,6 +1,6 @@
-content okeanos content/chrome/
-locale okeanos en-GB locale/en-GB/
-locale okeanos en-US locale/en-US/
-component {a73587f2-74f0-11e2-923f-d1186188709b} components/nsOkeanos.js
-contract @mozilla.org/mail/okeanos;1 {a73587f2-74f0-11e2-923f-d1186188709b}
-category cloud-files Okeanos @mozilla.org/mail/okeanos;1
+content synnefo content/chrome/
+locale synnefo en-GB locale/en-GB/
+locale synnefo en-US locale/en-US/
+component {62cf0994-d5e3-11e3-85dc-091c1d5d46b0} components/nsSynnefo.js
+contract @mozilla.org/mail/synnefo;1 {62cf0994-d5e3-11e3-85dc-091c1d5d46b0}
+category cloud-files Synnefo @mozilla.org/mail/synnefo;1

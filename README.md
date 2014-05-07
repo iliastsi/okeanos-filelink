@@ -1,6 +1,6 @@
-# ~okeanos support for Thunderbird's Filelink feature
+# Synnefo support for Thunderbird's Filelink feature
 
-This add-on adds support for ~okeanos accounts when using [Thunderbird's Filelink
+This add-on adds support for Synnefo accounts when using [Thunderbird's Filelink
 feature.](https://support.mozillamessaging.com/kb/filelink-large-attachments)
 
 [Developer documentation for Filelink can be found

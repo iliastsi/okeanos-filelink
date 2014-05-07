@@ -9,7 +9,7 @@
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
 <?xml-stylesheet href="chrome://messenger/skin/browserRequest.css" type="text/css"?>
 
-<!DOCTYPE window SYSTEM "chrome://okeanos/locale/auth.dtd" >
+<!DOCTYPE window SYSTEM "chrome://synnefo/locale/auth.dtd" >
 
 <window id="boxAuth"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
@@ -19,7 +19,7 @@
         title="&auth.title;">
 
         <script type="application/javascript"
-          src="chrome://okeanos/content/auth.js"/>
+          src="chrome://synnefo/content/auth.js"/>
 
   <keyset id="mainKeyset">
     <key id="key_close" key="w" modifiers="accel" oncommand="cancelRequest()"/>
