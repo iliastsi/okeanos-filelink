@@ -32,29 +32,16 @@ String.prototype.endsWith = function (s) {
  */
 function getCookie() {
   var cookieMgr = Cc["@mozilla.org/cookiemanager;1"].getService(Ci.nsICookieManager);
-
-  ret_cookie = null;
   var login_host = host();
 
   for (let e = cookieMgr.enumerator; e.hasMoreElements();) {
     let cookie = e.getNext().QueryInterface(Ci.nsICookie);
-    if (cookie.name == kCookieName) {
-      if (login_host.endsWith(cookie.host)) {
-        ret_cookie = cookie;
-        break;
-      }
+    if (cookie.name == kCookieName && login_host.endsWith(cookie.host)) {
+      return cookie;
     }
   }
 
-  if (ret_cookie != null) {
-    for (let e = cookieMgr.enumerator; e.hasMoreElements();) {
-      let cookie = e.getNext().QueryInterface(Ci.nsICookie);
-      if (cookie.host.endsWith(ret_cookie.host))
-        cookieMgr.remove(cookie.host, cookie.name, cookie.path, false);
-    }
-  }
-
-  return ret_cookie;
+  return null;
 }
 
 /*
@@ -102,15 +89,15 @@ var reporterListener = {
                      /*in unsigned long*/ aStateFlags,
                      /*in nsresult*/ aStatus) {
     /* If the user tries to leave our page, stop him. */
-    let state_transferring = aStateFlags & wpl.STATE_TRANSFERRING;
-    let state_is_request = aStateFlags & wpl.STATE_IS_REQUEST;
-    if (state_transferring && state_is_request) {
-      let curr_host = aWebProgress.DOMWindow.location.host;
-      if (!curr_host.endsWith(host())) {
-        aRequest.cancel(Cr.NS_BINDING_REDIRECTED);
-        aWebProgress.DOMWindow.location.href = loginUrl();
-      }
-    }
+    // let state_transferring = aStateFlags & wpl.STATE_TRANSFERRING;
+    // let state_is_request = aStateFlags & wpl.STATE_IS_REQUEST;
+    // if (state_transferring && state_is_request) {
+    //   let curr_host = aWebProgress.DOMWindow.location.host;
+    //   if (!curr_host.endsWith(host())) {
+    //     aRequest.cancel(Cr.NS_BINDING_REDIRECTED);
+    //     aWebProgress.DOMWindow.location.href = loginUrl();
+    //   }
+    // }
   },
 
   onProgressChange: function(/*in nsIWebProgress*/ aWebProgress,
@@ -189,7 +176,8 @@ function onLoad()
   document.getElementById("headerMessage").textContent = request.promptText;
 
   // Remove previous cookies
-  getCookie();
+  let cookieMgr = Cc["@mozilla.org/cookiemanager;1"].getService(Ci.nsICookieManager);
+  cookieMgr.removeAll();
 
   // Load first page
   loadRequestedUrl(loginUrl());
@@ -214,6 +202,10 @@ function loadRequestedUrl(aUrl)
  */
 function successRequest(uuid, token)
 {
+  // Remove all cookies
+  let cookieMgr = Cc["@mozilla.org/cookiemanager;1"].getService(Ci.nsICookieManager);
+  cookieMgr.removeAll();
+
   let request = window.arguments[0].wrappedJSObject;
   request.succeeded(uuid, token);
   window.close();
@@ -228,6 +220,10 @@ function cancelRequest()
 /* Called by auth.xul */
 function reportUserClosed()
 {
+  // Remove all cookies
+  let cookieMgr = Cc["@mozilla.org/cookiemanager;1"].getService(Ci.nsICookieManager);
+  cookieMgr.removeAll();
+
   let request = window.arguments[0].wrappedJSObject;
   request.failed();
 }
