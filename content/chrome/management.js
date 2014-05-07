@@ -17,6 +17,13 @@ function onLoadProvider(provider) {
   let remainingFileSpaceSwatch = document.getElementById("remaining-file-space-swatch");
   remainingFileSpaceSwatch.style.backgroundColor = pv.Colors.category20.values[1];
 
+  let privacyPolicy = document.getElementById("privacy-policy");
+  privacyPolicy.setAttribute("href", provider.serviceURL);
+  let termsService = document.getElementById("terms-service");
+  termsService.setAttribute("href", provider.serviceURL);
+  let accountSettings = document.getElementById("view-account-settings");
+  accountSettings.setAttribute("href", provider.serviceURL);
+
   let totalSpace = provider.fileSpaceUsed + provider.remainingFileSpace;
   let pieScale = 2 * Math.PI / totalSpace;
 

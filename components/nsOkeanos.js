@@ -15,15 +15,36 @@ Cu.import("resource://app/modules/Services.jsm");
 Cu.import("resource://app/modules/gloda/log4moz.js");
 Cu.import("resource://app/modules/cloudFileAccounts.js");
 
-var gPithosUrl = "";
-var gAstakosUrl = "";
-
-const kContainer = "ThunderBird FileLink/";
-const kPithosApi = "/object-store/v1/";
-const kAstakosApi = "/identity/v2.0/tokens";
+const kContainer = "ThunderBird FileLink";
+const kAstakosApi = "/tokens";
 const kUpdate = "?update&format=json"
 
 
+/**
+ * Strip 'val' from 'str'
+ */
+String.prototype.trimLeft = function(charlist) {
+  if (charlist === undefined)
+    charlist = "\s";
+
+  return this.replace(new RegExp("^[" + charlist + "]+"), "");
+};
+
+String.prototype.trimRight = function(charlist) {
+  if (charlist === undefined)
+    charlist = "\s";
+
+  return this.replace(new RegExp("[" + charlist + "]+$"), "");
+};
+
+String.prototype.trim = function(charlist) {
+  return this.trimLeft(charlist).trimRight(charlist);
+};
+
+
+/**
+ * Logger
+ */
 function nsOkeanos() {
   this.log = Log4Moz.getConfiguredLogger("Okeanos");
 }
@@ -36,33 +57,21 @@ nsOkeanos.prototype = {
 
   get type() "Okeanos",
   get displayName() "~okeanos",
-  get serviceURL() "https://okeanos.grnet.gr/",
+  get serviceURL() this._endpointURLs['astakos_weblogin'],
   get iconClass() "chrome://okeanos/content/okeanos.png",
   get accountKey() this._accountKey,
   get lastError() this._lastErrorText,
   get settingsURL() "chrome://okeanos/content/settings.xhtml",
-  get managementURL() {
-    if (this._accountType == "official")
-      return "chrome://okeanos/content/management_official.xhtml";
-    else
-      return "chrome://okeanos/content/management_trial.xhtml";
-  },
+  get managementURL() "chrome://okeanos/content/management.xhtml",
 
   _accountKey: false,
   _prefBranch: null,
   _userName: "",
-  _accountType: "",
-  _loggedIn: false,
-  _userInfo: false,
-  _file : null,
-  _requestDate: null,
-  _successCallback: null,
-  _connection: null,
-  _request: null,
+  _authURL: "",
+  _endpointURLs: null,
   _maxFileSize : -1,
   _fileSpaceUsed : -1,
   _availableStorage : -1,
-  _totalStorage: -1,
   _lastErrorStatus : 0,
   _lastErrorText : "",
   _uploadingFile : null,
@@ -82,15 +91,7 @@ nsOkeanos.prototype = {
     this._accountKey = aAccountKey;
     this._prefBranch = Services.prefs.getBranch(
             "mail.cloud_files.accounts." +  aAccountKey + ".");
-    this._accountType = this._prefBranch.getCharPref("accountType");
-    if (this._accountType == "official") {
-      gPithosUrl  = "https://pithos.okeanos.grnet.gr";
-      gAstakosUrl = "https://accounts.okeanos.grnet.gr";
-    } else {
-      gPithosUrl  = "https://storage.demo.synnefo.org";
-      gAstakosUrl = "https://accounts.demo.synnefo.org";
-    }
-    this._loggedIn = this._userName != "" && this._cachedAuthToken != "";
+    this._authURL = this._prefBranch.getCharPref("authURL").trimRight("/");
   },
 
 
@@ -163,6 +164,8 @@ nsOkeanos.prototype = {
 
     this.log.info("Checking to see if we're logged in");
 
+    this._clearUserInfo(); // force us to update userInfo on every upload.
+
     if (!this._loggedIn) {
       let onLoginSuccess = function() {
         this._getUserInfo(finish, onAuthFailure);
@@ -170,10 +173,7 @@ nsOkeanos.prototype = {
       return this.logon(onLoginSuccess, onAuthFailure, true);
     }
 
-    if (!this._userInfo)
-      return this._getUserInfo(finish, onAuthFailure);
-
-    finish();
+    this._getUserInfo(finish, onAuthFailure);
   },
 
   /**
@@ -193,8 +193,6 @@ nsOkeanos.prototype = {
       return aCallback.onStopRequest(null, null, exceedsFileLimit);
     if (aFile.fileSize > this._availableStorage)
       return aCallback.onStopRequest(null, null, exceedsQuota);
-
-    this._userInfo = false; // force us to update userInfo on every upload.
 
     if (!this._uploader) {
       this._uploader = new nsOkeanosFileUploader(
@@ -248,16 +246,120 @@ nsOkeanos.prototype = {
    *                        fails.
    */
   _getUserInfo: function nsOkeanos_userInfo(successCallback, failureCallback) {
-    this.log.info("getting user info");
+    // First retrieve UUID then Quotas
+    let retry = function() {
+      this._getUserInfo(successCallback, failureCallback);
+    }.bind(this);
+
+    let failure = function() {
+      this.clearPassword();
+      this.logon(retry, failureCallback, true);
+    }.bind(this);
+
+    let success3 = function() {
+      successCallback();
+    }.bind(this);
+
+    let success2 = function() {
+      this._getUserQuotas(success3, failure);
+    }.bind(this);
+
+    let success1 = function() {
+      this._getUserUUID(success2, failure);
+    }.bind(this);
+
+    this._getEndpoints(success1, failure);
+  },
+
+  /**
+   * A private function for retrieving the end points.
+   */
+  _getEndpoints: function nsOkeanos_endpoints(successCallback, failureCallback) {
+    this.log.info("Retrieving service endpoints")
+
+    if (this._endpointURLs != null) {
+      successCallback();
+      return;
+    }
+
+    // Retrieve endpoints
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
-    req.open("HEAD", gPithosUrl + kPithosApi + this._userName, true);
+    req.open("POST", this._authURL + kAstakosApi, true);
+    req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
+
+    req.onerror = function() {
+      this.log.info("Service not found");
+      failureCallback();
+    }.bind(this);
+
+    req.onload = function() {
+      if(req.status == 200) {
+        try {
+          this.log.info("request status = " + req.status +
+                        " response = " + req.responseText);
+          let docResponse = JSON.parse(req.responseText);
+          this.log.info("login response parsed = " + docResponse);
+
+          this._endpointURLs = {};
+          for (let i in docResponse.access.serviceCatalog) {
+            let service = docResponse.access.serviceCatalog[i];
+            switch(service.type) {
+              case "astakos_weblogin":
+                // TODO: This will be not necessary once the bug has been fixed
+                this._endpointURLs[service.name] = service.endpoints[0]['SNF:uiURL'].trimRight("/") + "/login";
+                break;
+              case "identity":
+              case "object-store":
+                this._endpointURLs[service.name] = service.endpoints[0].publicURL;
+                break;
+            }
+          }
+          if (this._endpointURLs['astakos_weblogin']
+              && this._endpointURLs['astakos_identity']
+              && this._endpointURLs['pithos_object-store']) {
+            successCallback();
+          } else {
+            this._endpointURLs = null;
+            failureCallback();
+          }
+        } catch (ex) {
+          this._endpointURLs = null;
+          failureCallback();
+        }
+      } else {
+        this._lastErrorText = req.responseText;
+        this._lastErrorStatus = req.status;
+        failureCallback();
+      }
+    }.bind(this);
+
+    req.setRequestHeader("Content-type", "application/json");
+    req.setRequestHeader("Accept", "application/json");
+    req.send();
+  },
+
+
+  /**
+   * A private function for retrieving quotas about a user.
+   *
+   * @param successCallback a callback fired if retrieving profile information
+   *                        is successful.
+   * @param failureCallback a callback fired if retrieving profile information
+   *                        fails.
+   */
+  _getUserQuotas: function nsOkeanos_userQuotas(successCallback, failureCallback) {
+    this.log.info("getting user quotas");
+    let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                .createInstance(Ci.nsIXMLHttpRequest);
+    req.open("HEAD", this._endpointURLs['pithos_object-store'].trimRight("/") +
+                     "/" + this._userName,
+             true);
     req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
 
     req.onload = function() {
       if (req.status >= 200 && req.status < 400) {
         this.log.info("request status = " + req.status);
-        this._userInfo = true;
         this._fileSpaceUsed =
           parseInt(req.getResponseHeader("X-Account-Bytes-Used"));
         this._availableStorage =
@@ -266,25 +368,81 @@ nsOkeanos.prototype = {
         this.log.info("available storage = " + this._availableStorage);
         successCallback();
       } else {
-        this.log.info("Our token has gone stale - requesting a new one.");
-        let retryGetUserInfo = function() {
-          this._getUserInfo(successCallback, failureCallback);
-        }.bind(this);
-        this.clearPassword();
-        this._loggedIn = false;
-        this.logon(retryGetUserInfo, failureCallback, true);
-        return;
+        failureCallback();
       }
     }.bind(this);
 
     req.onerror = function() {
-      this.log.info("getUserInfo failed - status = " + req.status);
+      this.log.info("getUserQuotas failed - status = " + req.status);
       failureCallback();
     }.bind(this);
 
     req.setRequestHeader("X-Auth-Token", this._cachedAuthToken);
     req.setRequestHeader("Content-type", "application/xml");
     req.send();
+  },
+
+  /**
+   * A private function for retrieving the UUID of a user.
+   *
+   * @param successCallback a callback fired if retrieing profile information
+   *                        is successfule.
+   * @param failureCallback a callback fired if retrieving profile information
+   *                        fails.
+   */
+  _getUserUUID: function nsOkeanos_userUUID(successCallback, failureCallback) {
+    this.log.info("getting user UUID");
+
+    if (this._userInfo) {
+      // We are ok
+      successCallback();
+      return;
+    }
+
+    this.log.info("Retrieving user's UUID...");
+
+    let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                .createInstance(Ci.nsIXMLHttpRequest);
+    req.open("POST", this._authURL + kAstakosApi, true);
+    req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
+
+    req.onerror = function() {
+      this.log.info("logon failure");
+      failureCallback();
+    }.bind(this);
+
+    req.onload = function() {
+      if(req.status == 200) {
+        this.log.info("request status = " + req.status +
+                      " response = " + req.responseText);
+        let docResponse = JSON.parse(req.responseText);
+        this.log.info("login response parsed = " + docResponse);
+        this._userName = docResponse.access.token.tenant.id;
+        this.log.info("uniq username = " + this._userName);
+        if (this._userName) {
+          successCallback();
+        } else {
+          this._lastErrorText = req.responseText;
+          this._lastErrorStatus = req.status;
+          failureCallback();
+        }
+      } else {
+        this._lastErrorText = req.responseText;
+        this._lastErrorStatus = req.status;
+        failureCallback();
+      }
+    }.bind(this);
+
+    req.setRequestHeader("Content-type", "application/json");
+    req.setRequestHeader("Accept", "application/json");
+    let body = {
+      "auth": {
+        "token": {
+          "id": this._cachedAuthToken
+        }
+      }
+    };
+    req.send(JSON.stringify(body));
   },
 
 
@@ -369,7 +527,7 @@ nsOkeanos.prototype = {
    */
   createExistingAccount: function nsOkeanos_createExistingAccount(
                              aRequestObserver) {
-     // XXX: replace this with a better function
+     // TODO: replace this with a better function
     let successCb = function(aResponseText, aRequest) {
       aRequestObserver.onStopRequest(null, this, Cr.NS_OK);
     }.bind(this);
@@ -444,6 +602,7 @@ nsOkeanos.prototype = {
     }.bind(this);
 
     req.setRequestHeader("Content-type", "application/json");
+    req.setRequestHeader("Accept", "application/json");
     req.setRequestHeader("X-Auth-Token", this._cachedAuthToken);
     req.send();
   },
@@ -454,48 +613,7 @@ nsOkeanos.prototype = {
    * URL's that nsOkeanos connects to.
    */
   overrideUrls : function nsOkeanos_overrideUrls(aNumUrls, aUrls) {
-    gAstakosUrl = aUrls[0];
-    gPithosUrl  = aUrls[1];
-  },
-
-
-  /**
-   * Returns the saved password for this account if one exists, or prompts
-   * the user for a password. Returns the empty string on failure.
-   *
-   * @param aUsername the username associated with the account / password.
-   * @param aNoPrompt a boolean for whether or not we should suppress
-   *                  the password prompt if no password exists.  If so,
-   *                  returns the empty string if no password exists.
-   */
-  getPassword: function nsOkeanos_getPassword(aUsername, aNoPrompt) {
-    this.log.info("Getting token for user: " + aUsername);
-
-    if (aNoPrompt)
-      this.log.info("Suppressing password prompt");
-
-    if (this._cachedAuthToken != "")
-      return this._cachedAuthToken;
-
-    if (aNoPrompt)
-      return "";
-
-    // OK, let's prompt for it.
-    let win = Services.wm.getMostRecentWindow(null);
-
-    let authPrompter = Services.ww.getNewAuthPrompter(win);
-    let password = { value: "" };
-    // Prompt for a token
-    let messengerBundle = Services.strings.createBundle(
-        "chrome://okeanos/locale/messenger.properties");
-    let promptString = messengerBundle.formatStringFromName(
-        "ppTokenPrompt", [this._accountType, this.displayName], 2);
-
-    if (authPrompter.prompt(this.displayName, promptString, gPithosUrl,
-                authPrompter.SAVE_PASSWORD_NEVER, null, password))
-      return password.value;
-
-    return "";
+    this._authURL = aUrls[0].trimRight("/");
   },
 
 
@@ -517,59 +635,53 @@ nsOkeanos.prototype = {
    *                where we don't want to pop up the oauth ui.
    */
   logon: function nsOkeanos_login(successCallback, failureCallback, aWithUI) {
-    this.log.info("Logging in, aWithUI = " + aWithUI);
-    this._cachedAuthToken = this.getPassword(this._userName, !aWithUI);
-    this.log.info("Sending login information...");
-
-    let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
-                .createInstance(Ci.nsIXMLHttpRequest);
-    req.open("POST", gAstakosUrl + kAstakosApi, true);
-    req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
-
-    req.onerror = function() {
-      this.log.info("logon failure");
-      this.clearPassword();
-      failureCallback();
-    }.bind(this);
-
-    req.onload = function() {
-      if(req.status == 200) {
-        this.log.info("request status = " + req.status +
-                      " response = " + req.responseText);
-        let docResponse = JSON.parse(req.responseText);
-        this.log.info("login response parsed = " + docResponse);
-        this._userName = docResponse.access.token.tenant.id;
-        this.log.info("uniq username = " + this._userName);
-        if (this._userName) {
-          this._loggedIn = true;
-          successCallback();
-        } else {
-          this.clearPassword();
-          this._loggedIn = false;
-          this._lastErrorText = req.responseText;
-          this._lastErrorStatus = req.status;
-          failureCallback();
-        }
-      } else {
-        this.clearPassword();
-        this._loggedIn = false;
-        this._lastErrorText = req.responseText;
-        this._lastErrorStatus = req.status;
-        failureCallback();
-      }
-    }.bind(this);
-
-    var body = {
-        "auth": {
-            "token": {
-                "id": this._cachedAuthToken
-            }
-        }
+    if (this._loggedIn) {
+      // We are already logged in
+      successCallback();
+      return;
     }
-    req.setRequestHeader("Content-type", "application/json");
-    req.setRequestHeader("Accept", "application/json");
-    req.send(JSON.stringify(body));
-    this.log.info("Login information sent!");
+
+    if (!aWithUI) {
+      // I cannot login without a UI
+      failureCallback();
+      return;
+    }
+
+    // Ok let's do it...
+    // Open UI and let user authenticate
+    let getToken = function() {
+      this._browserRequest = {
+        promptText : "Okeanos",
+        account: this,
+        _active: true,
+        iconURI : this.iconClass,
+        loginURL : this._endpointURLs['astakos_weblogin'],
+        successCallback : successCallback,
+        failureCallback : failureCallback,
+        cancelled: function() {
+          this.failed();
+        },
+        failed : function() {
+          if (!this._active)
+            return;
+          this.account.log.info("auth cancelled");
+          this.failureCallback();
+        },
+        succeeded: function(uuid, token) {
+          if (!this._active)
+            return;
+          this.account.log.info("auth finished");
+          this.account._cachedAuthToken = token;
+          this.successCallback();
+        },
+      };
+      this.wrappedJSObject = this._browserRequest;
+      Services.ww.openWindow(
+          null, "chrome://okeanos/content/auth.xul",
+          null, "chrome,centerscreen,width=1100px,height=1000px", this);
+    }.bind(this);
+
+    this._getEndpoints(getToken, failureCallback);
   },
 
 
@@ -594,6 +706,28 @@ nsOkeanos.prototype = {
     cloudFileAccounts.setSecretValue(
             this.accountKey, cloudFileAccounts.kTokenRealm, aAuthToken);
   },
+
+  /**
+   * We are logged in if we have a cached Auth Token
+   */
+  get _loggedIn() {
+    return this._cachedAuthToken != "";
+  },
+
+  /**
+   * We have retrieved user info if we have a UUID
+   */
+  get _userInfo() {
+    return this._userName != "";
+  },
+
+  /**
+   * Clear user info
+   */
+  _clearUserInfo : function nsOkeanos_clearUserInfo() {
+    this._userName = "";
+  },
+
 };
 
 
@@ -640,8 +774,8 @@ nsOkeanosFileUploader.prototype = {
   _prepareToSend: function nsPFU__prepareToSend(successCallback,
                                                 failureCallback) {
     // First create the container
-    let container = gPithosUrl + kPithosApi +
-      this.okeanos._userName + "/" + kContainer;
+    let container = this.okeanos._endpointURLs['pithos_object-store'].trimRight("/") +
+      "/" + this.okeanos._userName + "/" + kContainer + "/";
     let dateStr = this._formatDate();
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
@@ -779,7 +913,7 @@ nsOkeanosFileUploader.prototype = {
     this.log.info("Making file " + this.file + " public");
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
-    req.open("POST", this._urlFile + kUpdate, true);
+    req.open("POST", this._urlFile.trimRight("/") + kUpdate, true);
     req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
 
     let failed = function() {

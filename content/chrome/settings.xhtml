@@ -17,17 +17,18 @@
   </head>
   <body id="provider-settings">
     <form id="provider-form" onsubmit="return false;">
-      <a id="dashboard" href="https://accounts.okeanos.grnet.gr/ui/api_access" class="float-right">&OkeanosSettings.dashboard;</a>
-      <label for="accountType">&OkeanosSettings.accountType;</label>
-      <select id="accountType" onchange="toggleDashboard()">
-        <option value="official">&OkeanosSettings.official; (https://okeanos.grnet.gr)</option>
-        <option value="trial">&OkeanosSettings.trial; (http://synnefo.org)</option>
-      </select>
+      <label for="authURL">&OkeanosSettings.authURL;</label>
+      <input id="authURL" type="text"
+             value="https://accounts.okeanos.grnet.gr/identity/v2.0"/>
       <div id="learn-more" class="float-right">
-        <a href="https://okeanos.grnet.gr/about/what/">&OkeanosSettings.learnMore;</a>
+        <a href="https://synnefo.org">
+          &OkeanosSettings.learnMore;
+        </a>
       </div>
       <div>
-        <a id="newaccount" href="https://accounts.okeanos.grnet.gr/ui/signup">&OkeanosSettings.needAnAccount;</a>
+        <a id="newaccount" href="https://accounts.demo.synnefo.org/ui/signup#">
+          &OkeanosSettings.needAnAccount;
+        </a>
       </div>
     </form>
   </body>
