@@ -9,7 +9,6 @@ const Ci = Components.interfaces;
 const Cu = Components.utils;
 const Cr = Components.results;
 
-Cu.import("resource:///modules/http.jsm");
 Cu.import("resource:///modules/gloda/log4moz.js");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
@@ -160,8 +159,9 @@ var reporterListener = {
       this.securityButton.hidden = true;
       this.securityButton.removeAttribute("level");
     }
-    this.securityButton.setAttribute("tooltiptext",
-                                     browser.securityUI.tooltipText);
+    // XXX: This used to work in previous Thunderbird version
+    // this.securityButton.setAttribute("tooltiptext",
+    //                                  browser.securityUI.tooltipText);
   }
 }
 
