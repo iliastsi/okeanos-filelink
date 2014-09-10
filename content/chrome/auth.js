@@ -18,11 +18,11 @@ const kCookieName = "_pithos2_a";
 
 
 /*
- * Add 'endsWith' method to string objects
+ * Implement 'endsWith' function for string objects
  */
-String.prototype.endsWith = function (s) {
-  return this.length >= s.length &&
-    this.substr(this.length - s.length) == s;
+function endsWith(str, suffix) {
+  return str.length >= suffix.length &&
+    str.substr(str.length - suffix.length) == suffix;
 }
 
 
@@ -35,7 +35,7 @@ function getCookie() {
 
   for (let e = cookieMgr.enumerator; e.hasMoreElements();) {
     let cookie = e.getNext().QueryInterface(Ci.nsICookie);
-    if (cookie.name == kCookieName && login_host.endsWith(cookie.host)) {
+    if (cookie.name == kCookieName && endsWith(login_host, cookie.host)) {
       return cookie;
     }
   }
@@ -92,7 +92,7 @@ var reporterListener = {
     // let state_is_request = aStateFlags & wpl.STATE_IS_REQUEST;
     // if (state_transferring && state_is_request) {
     //   let curr_host = aWebProgress.DOMWindow.location.host;
-    //   if (!curr_host.endsWith(host())) {
+    //   if (!endsWith(curr_host, host())) {
     //     aRequest.cancel(Cr.NS_BINDING_REDIRECTED);
     //     aWebProgress.DOMWindow.location.href = loginUrl();
     //   }

@@ -23,23 +23,23 @@ const kUpdate = "?update&format=json"
 /**
  * Strip 'val' from 'str'
  */
-String.prototype.trimLeft = function(charlist) {
+function trimLeft(str, charlist) {
   if (charlist === undefined)
     charlist = "\s";
 
-  return this.replace(new RegExp("^[" + charlist + "]+"), "");
-};
+  return str.replace(new RegExp("^[" + charlist + "]+"), "");
+}
 
-String.prototype.trimRight = function(charlist) {
+function trimRight(str, charlist) {
   if (charlist === undefined)
     charlist = "\s";
 
-  return this.replace(new RegExp("[" + charlist + "]+$"), "");
-};
+  return str.replace(new RegExp("[" + charlist + "]+$"), "");
+}
 
-String.prototype.trim = function(charlist) {
-  return this.trimLeft(charlist).trimRight(charlist);
-};
+function trim(str, charlist) {
+  return trimRiht(trimLeft(str, charlist), charlist);
+}
 
 
 /**
@@ -91,7 +91,7 @@ nsSynnefo.prototype = {
     this._accountKey = aAccountKey;
     this._prefBranch = Services.prefs.getBranch(
             "mail.cloud_files.accounts." +  aAccountKey + ".");
-    this._authURL = this._prefBranch.getCharPref("authURL").trimRight("/");
+    this._authURL = trimRight(this._prefBranch.getCharPref("authURL"), "/");
   },
 
 
@@ -307,7 +307,8 @@ nsSynnefo.prototype = {
             switch(service.type) {
               case "astakos_weblogin":
                 // TODO: This will be not necessary once the bug has been fixed
-                this._endpointURLs[service.name] = service.endpoints[0]['SNF:uiURL'].trimRight("/") + "/login";
+                this._endpointURLs[service.name] =
+                    trimRight(service.endpoints[0]['SNF:uiURL'], "/") + "/login";
                 break;
               case "identity":
               case "object-store":
@@ -352,7 +353,7 @@ nsSynnefo.prototype = {
     this.log.info("getting user quotas");
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
-    req.open("HEAD", this._endpointURLs['pithos_object-store'].trimRight("/") +
+    req.open("HEAD", trimRight(this._endpointURLs['pithos_object-store'], "/") +
                      "/" + this._userName,
              true);
     req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
@@ -613,7 +614,7 @@ nsSynnefo.prototype = {
    * URL's that nsSynnefo connects to.
    */
   overrideUrls : function nsSynnefo_overrideUrls(aNumUrls, aUrls) {
-    this._authURL = aUrls[0].trimRight("/");
+    this._authURL = trimRight(aUrls[0], "/");
   },
 
 
@@ -774,7 +775,7 @@ nsSynnefoFileUploader.prototype = {
   _prepareToSend: function nsPFU__prepareToSend(successCallback,
                                                 failureCallback) {
     // First create the container
-    let container = this.synnefo._endpointURLs['pithos_object-store'].trimRight("/") +
+    let container = trimRight(this.synnefo._endpointURLs['pithos_object-store'], "/") +
       "/" + this.synnefo._userName + "/" + kContainer + "/";
     let dateStr = this._formatDate();
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
@@ -913,7 +914,7 @@ nsSynnefoFileUploader.prototype = {
     this.log.info("Making file " + this.file + " public");
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
-    req.open("POST", this._urlFile.trimRight("/") + kUpdate, true);
+    req.open("POST", trimRight(this._urlFile, "/") + kUpdate, true);
     req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
 
     let failed = function() {

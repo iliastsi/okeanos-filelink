@@ -1,5 +1,4 @@
 content synnefo content/chrome/
-locale synnefo en-GB locale/en-GB/
 locale synnefo en-US locale/en-US/
 component {62cf0994-d5e3-11e3-85dc-091c1d5d46b0} components/nsSynnefo.js
 contract @mozilla.org/mail/synnefo;1 {62cf0994-d5e3-11e3-85dc-091c1d5d46b0}
